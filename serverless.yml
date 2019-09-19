@@ -1,0 +1,114 @@
+
+service: twitterstreaming
+
+custom:
+  defaultStage: dev
+  profiles:
+    dev: serverless-cli
+  pythonRequirements:
+    dockerizePip: non-linux
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage: ${opt:stage, self:custom.defaultStage}
+  profile: ${self:custom.profiles.${self:provider.stage}}
+  region: us-west-2
+
+  environment:
+    ACCOUNT_ID: 169762616127
+    QUEUE_NAME: ${self:service}-${self:provider.stage}
+    DB_TABLE_NAME: ${self:service}-${self:provider.stage}-test
+    PROCESS_MESSAGE_RULE: ${self:service}-process_message-${self:provider.stage}
+#    CALL_TWITTER_API_RULE: ${self:service}-call_twitter_api-${self:provider.stage}
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "sqs:ReceiveMessage"
+        - "sqs:SendMessage"
+        - "sqs:ListQueues"
+        - "sqs:GetQueueUrl"
+        - "sqs:GetQueueAttributes"
+        - "sqs:DeleteMessage"
+      Resource: "arn:aws:sqs:${self:provider.region}:*:${self:provider.environment.QUEUE_NAME}"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:DescribeTable"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DB_TABLE_NAME}"
+
+
+functions:
+  process_queue_message:
+    handler: handler.process_queue_message
+    events:
+      - schedule: rate(1 minute)
+        name: ${self:provider.environment.PROCESS_MESSAGE_RULE}
+        description: 'Getting message from SQS and save it to DynamoDB every 1 minutes'
+#      - http:
+#          path: process_message
+#          method: get
+#      - sqs: arn:aws:sqs:${self:provider.region}:${self:provider.environment.ACCOUNT_ID}:${self:provider.environment.QUEUE_NAME}
+#        batchSize: 10
+
+  get_tweets:
+    handler: handler.get_tweets
+    events:
+      - http:
+          path: get_tweets
+          method: get
+          cors: true
+
+  stream_tweets:
+    handler: handler.stream_tweets
+    events:
+      - http:
+          path: stream_tweets
+          method: post
+          cors: true
+    timeout: 20
+    environment:
+      TWITTER_STREAM_TIMEOUT: 20
+
+#  call_twitter_stream_api:
+#    handler: handler.call_twitter_stream_api
+#    events:
+#      - schedule: rate(1 minute)
+#        name: ${self:provider.environment.CALL_TWITTER_API_RULE}
+#        description: 'Calling Twitter Streaming API and save it to SQS every 1 minutes'
+
+
+resources:
+  Resources:
+    Messages:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:provider.environment.QUEUE_NAME}
+
+    StreamTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DB_TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: N
+          - AttributeName: created_at
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: created_at
+            KeyType: RANGE
+
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+plugins:
+  - serverless-python-requirements
