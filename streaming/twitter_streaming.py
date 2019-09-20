@@ -10,47 +10,31 @@ from streaming.constants import CONSUMER_KEY, CONSUMER_KEY_SECRET, ACCESS_TOKEN,
 from streaming.aws import send_sqs_message
 
 
-class Singleton(type):
-    """
-    Define an Instance operation that lets clients access its unique
-    instance.
-    """
-
-    def __init__(cls, name, bases, attrs, **kwargs):
-        super().__init__(name, bases, attrs)
-        cls._instance = None
-
-    def __call__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__call__(*args, **kwargs)
-        return cls._instance
-
-
-class TwitterStreamer(metaclass=Singleton):
+class TwitterStreamer(object):
     """
     Streaming Live Data
     """
+
     def __init__(self):
-        run_time = int(os.environ['TWITTER_STREAM_TIMEOUT']) - 5
+        run_time = int(os.environ['TWITTER_STREAM_TIMEOUT']) - 10
         listener = TwitterStreamListener(run_time)
 
         auth = OAuthHandler(CONSUMER_KEY, CONSUMER_KEY_SECRET)
         auth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
-        self.stream = Stream(auth, listener)
+        self.stream = Stream(auth, listener, timeout=run_time)
 
-    def stream_tweets(self, tags, for_testing=False):
-        if for_testing:
-            data = {"id": 1174614891228848128, "created_at": "Thu Sep 19 09:23:08 +0000 2019",
-                    "text": "rt @brat2381: whos shocked by this? anyone? trump insider claims melania has a long-term boyfriend (and donald trump knows about it) htt",
-                    "country": None}
-            json_dump = json.dumps(data)
-            send_sqs_message(json_dump)
-        else:
+    def stream_tweets(self, tags):
+        try:
+            print("Started listening to twitter stream...")
             self.stream.filter(track=tags)
-
-    def unstream_tweets(self):
-        self.stream.disconnect()
+        # except (Timeout, SSLError, ReadTimeoutError, ConnectionError) as e:
+        #     print("Network error occurred. Keep calm and carry on.", str(e))
+        except Exception as e:
+            print("Error on streaming!", e)
+            pass
+        # finally:
+        #     print("Stream has crashed. System will restart twitter stream!")
 
 
 class TwitterStreamListener(StreamListener):
@@ -58,9 +42,10 @@ class TwitterStreamListener(StreamListener):
     Processing Live Data
     """
 
-    def __init__(self, time_limit=20):
+    def __init__(self, time_limit=10):
         self.start_time = time.time()
         self.time_limit = time_limit
+        self.tweet_count = 0
         super().__init__()
 
     def on_data(self, raw_data):
@@ -74,7 +59,7 @@ class TwitterStreamListener(StreamListener):
             country = decoded.get('country')
 
             content = {
-                'id':  decoded['id'],
+                'id': decoded['id'],
                 'created_at': created_at,
                 'text': text,
                 'country': country,
@@ -88,11 +73,14 @@ class TwitterStreamListener(StreamListener):
 
             json_dump = json.dumps(content)
             send_sqs_message(json_dump)
+            self.tweet_count += 1
+            print(f'{self.tweet_count} tweets received')
             return True
 
-    def on_error(self, status_code):
-        print("Error code", status_code)
+    def on_timeout(self):
+        """Called when stream connection times out"""
+        return False
 
-
-
-
+    def on_exception(self, exception):
+        """Called when an unhandled exception occurs."""
+        return False

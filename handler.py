@@ -55,7 +55,7 @@ def stream_tweets(event, context):
     streamer = TwitterStreamer()
 
     if start_streaming:
-        streamer.stream_tweets(tags=tags if tags else ['serverless'], for_testing=False)
+        streamer.stream_tweets(tags=tags if tags else ['serverless'])
     else:
         streamer.unstream_tweets()
 
