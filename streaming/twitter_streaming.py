@@ -69,16 +69,21 @@ class TwitterStreamListener(StreamListener):
 
         decoded = json.loads(html.unescape(raw_data))
         if decoded:
-            id = decoded['id']
             created_at = decoded.get('created_at', '')
             text = decoded['text'].lower().encode('ascii', 'ignore').decode('ascii')
             country = decoded.get('country')
 
             content = {
-                'id': id,
+                'id':  decoded['id'],
                 'created_at': created_at,
                 'text': text,
-                'country': country
+                'country': country,
+                'user': {
+                    'name': decoded['user']['name'],
+                    'profile_image_url': decoded['user']['profile_image_url']
+                },
+                'favorite_count': decoded['favorite_count'],
+                'reply_count': decoded['reply_count']
             }
 
             json_dump = json.dumps(content)
@@ -86,7 +91,7 @@ class TwitterStreamListener(StreamListener):
             return True
 
     def on_error(self, status_code):
-        print(status_code)
+        print("Error code", status_code)
 
 
 

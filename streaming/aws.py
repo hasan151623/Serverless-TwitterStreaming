@@ -35,10 +35,8 @@ def send_sqs_message(msg_body):
     """
 
     try:
-        print("que url", QUEUE_URL)
         sqs_client.send_message(QueueUrl=QUEUE_URL,
                                 MessageBody=msg_body)
-        print("Sending message", msg_body)
         return True
     except ClientError as e:
         logging.error(e)
@@ -86,11 +84,13 @@ def delete_sqs_message(msg_receipt_handle):
 
 
 def insert_item_to_dynamo_db(messages):
-    logging.info("Inserting to dynamoDB")
     for message in messages:
         receipt_handle = message['ReceiptHandle']
         body = json.loads(message['Body'])
+
         if receipt_handle:
+            # logging into cloudwatch logs
+            logging.info(body)
             try:
                 resp = table.put_item(Item=body)
             except ClientError as e:

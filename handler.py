@@ -33,7 +33,11 @@ def get_tweets(event, context):
 
     response = {
         "statusCode": 200,
-        "body": json.dumps(items, cls=DecimalEncoder)
+        "body": json.dumps(items, cls=DecimalEncoder),
+        "headers": {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': True,
+        },
     }
     return response
 
@@ -57,6 +61,10 @@ def stream_tweets(event, context):
 
     response = {
         "statusCode": 200,
-        "body": "Completed"
+        "body": "Completed",
+        "headers": {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': True,
+        }
     }
     return response
