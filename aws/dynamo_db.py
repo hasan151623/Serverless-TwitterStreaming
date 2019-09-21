@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import boto3
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 
 
@@ -35,8 +35,15 @@ def insert_item_to_dynamo_db(messages):
             delete_sqs_message(receipt_handle)
 
 
-def get_items_from_dynamo_db(date):
-    result = table.query(KeyConditionExpression=Key('created_date').eq(date), ScanIndexForward=False, Limit=10)
+def get_items_from_dynamo_db(date, tag):
+    params = {
+        'KeyConditionExpression': Key('created_date').eq(date),
+        'ScanIndexForward': False, "Limit": 10
+    }
+    if tag:
+        params.update({'FilterExpression': Attr('text').contains(tag)})
+
+    result = table.query(**params)
     items = result.get("Items")
     return items
 

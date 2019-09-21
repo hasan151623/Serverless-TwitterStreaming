@@ -33,14 +33,15 @@ def process_queue_message(event, context):
 
 def get_tweets(event, context):
     params = event.get('queryStringParameters', None)
-    date = None
+    date = tag = None
     if params:
         date = params.get('date', None)
+        tag = params.get('tag', None)
 
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
 
-    items = get_items_from_dynamo_db(date)
+    items = get_items_from_dynamo_db(date, tag)
 
     response = {
         "statusCode": 200,
