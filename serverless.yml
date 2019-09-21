@@ -57,11 +57,19 @@ functions:
 #      - sqs: arn:aws:sqs:${self:provider.region}:${self:provider.environment.ACCOUNT_ID}:${self:provider.environment.QUEUE_NAME}
 #        batchSize: 10
 
-  get_tweets:
-    handler: handler.get_tweets
+  get_live_tweets:
+    handler: handler.get_live_tweets
     events:
       - http:
-          path: get_tweets
+          path: get_live_tweets
+          method: get
+          cors: true
+
+  get_past_tweets:
+    handler: handler.get_past_tweets
+    events:
+      - http:
+          path: get_past_tweets
           method: get
           cors: true
 

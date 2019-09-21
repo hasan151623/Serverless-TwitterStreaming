@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -68,3 +69,13 @@ def delete_sqs_message(msg_receipt_handle):
     """
     sqs_client.delete_message(QueueUrl=QUEUE_URL,
                               ReceiptHandle=msg_receipt_handle)
+
+
+def get_live_messages_from_sqs(num_msgs=10):
+    messages = retrieve_sqs_messages(num_msgs=num_msgs)
+    items = []
+    if messages:
+        for message in messages:
+            items.append(json.loads(message['Body']))
+    return items
+
