@@ -1,7 +1,10 @@
 import json
+from datetime import datetime
 
+from aws.dynamo_db import insert_item_to_dynamo_db, get_items_from_dynamo_db
+from aws.sqs import retrieve_sqs_messages
+from streaming.constants import NUMBER_OF_MESSAGES_TO_READ
 from streaming.twitter_streaming import TwitterStreamer
-from streaming.aws import retrieve_sqs_messages, insert_item_to_dynamo_db, get_items_from_dynamo_db
 
 
 # sls invoke -f process_queue_message
@@ -9,7 +12,7 @@ from streaming.utils import DecimalEncoder
 
 
 def process_queue_message(event, context):
-    messages = retrieve_sqs_messages(num_msgs=10)
+    messages = retrieve_sqs_messages(num_msgs=NUMBER_OF_MESSAGES_TO_READ)
     if messages:
         insert_item_to_dynamo_db(messages)
 
@@ -29,7 +32,15 @@ def process_queue_message(event, context):
 # sls invoke -f get_tweets
 
 def get_tweets(event, context):
-    items = get_items_from_dynamo_db()
+    params = event.get('queryStringParameters', None)
+    date = None
+    if params:
+        date = params.get('date', None)
+
+    if date is None:
+        date = datetime.now().strftime("%Y-%m-%d")
+
+    items = get_items_from_dynamo_db(date)
 
     response = {
         "statusCode": 200,
@@ -49,15 +60,8 @@ def stream_tweets(event, context):
 
     tags = body.get("tags")
 
-    # To toggle between stream and un-stream twitter posts
-    start_streaming = True
-
     streamer = TwitterStreamer()
-
-    if start_streaming:
-        streamer.stream_tweets(tags=tags if tags else ['serverless'])
-    else:
-        streamer.unstream_tweets()
+    streamer.stream_tweets(tags=tags if tags else ['serverless'])
 
     response = {
         "statusCode": 200,

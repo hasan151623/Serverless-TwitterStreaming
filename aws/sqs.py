@@ -1,11 +1,8 @@
-import json
 import logging
 import os
+
 import boto3
 from botocore.exceptions import ClientError
-
-# SQS Client
-from streaming.utils import DecimalEncoder
 
 sqs_client = boto3.client('sqs')
 
@@ -15,16 +12,6 @@ try:
     QUEUE_URL = queue['QueueUrl']
 except ClientError as e:
     logging.error("error on retrieving sqs")
-
-
-# DynamoDB Resource
-dynamo_db = boto3.resource('dynamodb')
-table = None
-
-try:
-    table = dynamo_db.Table(os.environ['DB_TABLE_NAME'])
-except ClientError as e:
-    logging.error("error on retrieving dynamodb table")
 
 
 def send_sqs_message(msg_body):
@@ -81,27 +68,3 @@ def delete_sqs_message(msg_receipt_handle):
     """
     sqs_client.delete_message(QueueUrl=QUEUE_URL,
                               ReceiptHandle=msg_receipt_handle)
-
-
-def insert_item_to_dynamo_db(messages):
-    for message in messages:
-        receipt_handle = message['ReceiptHandle']
-        body = json.loads(message['Body'])
-
-        if receipt_handle:
-            # logging into cloudwatch logs
-            logging.info(body)
-            try:
-                resp = table.put_item(Item=body)
-            except ClientError as e:
-                logging.error("DynamoDB insertion error", str(e))
-
-            # Deleting message from sqs
-            delete_sqs_message(receipt_handle)
-
-
-def get_items_from_dynamo_db():
-    result = table.scan(Limit=10)
-    items = result.get("Items")
-    return items
-

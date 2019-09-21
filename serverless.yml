@@ -18,7 +18,7 @@ provider:
   environment:
     ACCOUNT_ID: 169762616127
     QUEUE_NAME: ${self:service}-${self:provider.stage}
-    DB_TABLE_NAME: ${self:service}-${self:provider.stage}-test
+    DB_TABLE_NAME: ${self:service}-${self:provider.stage}
     PROCESS_MESSAGE_RULE: ${self:service}-process_message-${self:provider.stage}
 #    CALL_TWITTER_API_RULE: ${self:service}-call_twitter_api-${self:provider.stage}
 
@@ -96,14 +96,14 @@ resources:
       Properties:
         TableName: ${self:provider.environment.DB_TABLE_NAME}
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: timestamp_ms
             AttributeType: N
-          - AttributeName: created_at
+          - AttributeName: created_date
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: created_date
             KeyType: HASH
-          - AttributeName: created_at
+          - AttributeName: timestamp_ms
             KeyType: RANGE
 
         ProvisionedThroughput:
