@@ -32,7 +32,7 @@ def insert_item_to_dynamo_db(messages):
             try:
                 resp = table.put_item(Item=body)
             except ClientError as e:
-                logging.error("DynamoDB insertion error", str(e))
+                logging.error("DynamoDB insertion error: ${0}".format(str(e)))
 
             # Deleting message from sqs
             delete_sqs_message(receipt_handle)
