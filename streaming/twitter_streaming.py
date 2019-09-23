@@ -58,11 +58,21 @@ class TwitterStreamListener(StreamListener):
         
         if tweet:
             text = tweet['text'].lower().encode('ascii', 'ignore').decode('ascii')
-            country = tweet['place']['country'] if tweet.get('place', None) else None
             # created_at is Sat Sep 21 14:58:41 +0000 2019. Using regular expression to remove +0000 from it.˙
             created_at = re.sub(r"\+\d+\s", "", tweet.get('created_at', ''))
             created_date = datetime.strptime(created_at, "%a %b %d %H:%M:%S %Y").strftime("%Y-%m-%d")
-            #
+
+            # trying to get tweet origin country
+            country = None
+            try:
+                if tweet.get('retweeted_status', None):
+                    country = tweet['retweeted_status']['place']['country'] if tweet['retweeted_status'].get(
+                        'place') else tweet['retweeted_status']['user'].get('location', None)
+                else:
+                    country = tweet['place']['country'] if tweet.get('place') else tweet['user'].get('location', None)
+            except KeyError:
+                pass
+
             content = {
                 'tweet_id_str': tweet['id_str'],
                 'created_date': created_date,  # partition key
@@ -78,6 +88,7 @@ class TwitterStreamListener(StreamListener):
             }
 
             json_dump = json.dumps(content)
+
             send_sqs_message(json_dump)
             # self.tweet_count += 1
             # print(f'{self.tweet_count} tweets received')

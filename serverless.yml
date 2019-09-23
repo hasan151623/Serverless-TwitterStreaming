@@ -64,6 +64,9 @@ functions:
           path: get_live_tweets
           method: get
           cors: true
+    timeout: 20
+    environment:
+      SQS_MESSAGE_READ_TIMEOUT: 20
 
   get_past_tweets:
     handler: handler.get_past_tweets

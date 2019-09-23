@@ -1,4 +1,6 @@
 import json
+import os
+import time
 from datetime import datetime
 
 from aws.dynamo_db import insert_item_to_dynamo_db, get_items_from_dynamo_db
@@ -28,13 +30,33 @@ def process_queue_message(event, context):
     return response
 
 
-# sls invoke -f get_tweets
+#  sls invoke local -f get_live_tweets --data '{ "queryStringParameters": {"tag":"donald"}}'
 
 def get_live_tweets(event, context):
-    items = get_live_messages_from_sqs(num_msgs=NUMBER_OF_MESSAGES_TO_READ)
+    params = event.get('queryStringParameters', None)
+    tag = None
+    if params:
+        tag = params.get('tag', None)
+
+    live_tweets = []
+    tweet_count = 0
+    start_time = time.time()
+    time_limit = int(os.environ['SQS_MESSAGE_READ_TIMEOUT']) - 5
+
+    while (time.time() - start_time) < time_limit:
+        items = get_live_messages_from_sqs(num_msgs=NUMBER_OF_MESSAGES_TO_READ)
+        if tag:
+            items = [item for item in items if tag in item['text']]
+
+        returned_tweet_count = len(items)
+        if returned_tweet_count > 0:
+            live_tweets.extend(items)
+            tweet_count += returned_tweet_count
+            break
+
     response = {
         "statusCode": 200,
-        "body": json.dumps(items, cls=DecimalEncoder),
+        "body": json.dumps(live_tweets, cls=DecimalEncoder),
         "headers": {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Credentials': True,
