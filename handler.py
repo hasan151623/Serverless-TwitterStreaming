@@ -45,15 +45,16 @@ def get_live_tweets(event, context):
 
 def get_past_tweets(event, context):
     params = event.get('queryStringParameters', None)
-    date = tag = None
+    date = tag = last_evaluated_key = None
     if params:
         date = params.get('date', None)
         tag = params.get('tag', None)
+        last_evaluated_key = params.get('last_evaluated_key', None)
 
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
 
-    items = get_items_from_dynamo_db(date, tag)
+    items = get_items_from_dynamo_db(date, tag, last_evaluated_key)
 
     response = {
         "statusCode": 200,

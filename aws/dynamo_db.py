@@ -1,6 +1,9 @@
 import json
 import logging
 import os
+from ast import literal_eval
+from base64 import b64decode
+
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
@@ -35,7 +38,7 @@ def insert_item_to_dynamo_db(messages):
             delete_sqs_message(receipt_handle)
 
 
-def get_items_from_dynamo_db(date, tag):
+def get_items_from_dynamo_db(date, tag, last_evaluated_key=None):
     params = {
         'KeyConditionExpression': Key('created_date').eq(date),
         'ScanIndexForward': False, "Limit": 10
@@ -43,7 +46,11 @@ def get_items_from_dynamo_db(date, tag):
     if tag:
         params.update({'FilterExpression': Attr('text').contains(tag)})
 
+    if last_evaluated_key:
+        # last evaluated key is binary encoded. It needs to be decoded first and then convert bytes to dict
+
+        params['ExclusiveStartKey'] = literal_eval(b64decode(last_evaluated_key).decode('utf-8'))
+
     result = table.query(**params)
-    items = result.get("Items")
-    return items
+    return result
 
