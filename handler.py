@@ -3,9 +3,10 @@ import os
 import time
 from datetime import datetime
 
+from aws.cloudwatch import list_cloud_watch_metrics
 from aws.dynamo_db import insert_item_to_dynamo_db, get_items_from_dynamo_db
 from aws.sqs import retrieve_sqs_messages, get_live_messages_from_sqs
-from streaming.constants import NUMBER_OF_MESSAGES_TO_READ
+from streaming.constants import NUMBER_OF_MESSAGES_TO_READ, CLOUD_WATCH_DIMENSION_NAME
 from streaming.twitter_streaming import TwitterStreamer
 
 
@@ -106,5 +107,18 @@ def stream_tweets(event, context):
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Credentials': True,
         }
+    }
+    return response
+
+
+def get_cloud_watch_metrics(event, context):
+    metrics = list_cloud_watch_metrics(CLOUD_WATCH_DIMENSION_NAME)
+    response = {
+        "statusCode": 200,
+        "body": metrics,
+        "headers": {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': True,
+        },
     }
     return response

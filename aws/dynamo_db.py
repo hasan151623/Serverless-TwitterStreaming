@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 
 
 # DynamoDB Resource
+from aws.cloudwatch import push_to_cloud_watch_metrics
 from aws.sqs import delete_sqs_message
 
 dynamo_db = boto3.resource('dynamodb')
@@ -27,12 +28,18 @@ def insert_item_to_dynamo_db(messages):
         body = json.loads(message['Body'])
 
         if receipt_handle:
-            # logging into cloudwatch logs
+            # logging into CloudWatch Logs
             logging.info(body)
+
             try:
                 resp = table.put_item(Item=body)
             except ClientError as e:
                 logging.error("DynamoDB insertion error: ${0}".format(str(e)))
+
+            # Pushing to CloudWatch Metrics
+            country = body.get('country')
+            if country and isinstance(country, str):
+                push_to_cloud_watch_metrics(body['country'])
 
             # Deleting message from sqs
             delete_sqs_message(receipt_handle)

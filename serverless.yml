@@ -43,6 +43,11 @@ provider:
         - "dynamodb:DeleteItem"
       Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DB_TABLE_NAME}"
 
+    - Effect: "Allow"
+      Action:
+        - "cloudwatch:*"
+      Resource: "*"
+
 
 functions:
   process_queue_message:
@@ -86,6 +91,13 @@ functions:
     timeout: 20
     environment:
       TWITTER_STREAM_TIMEOUT: 20
+  get_cloud_watch_metrics:
+    handler: handler.get_cloud_watch_metrics
+    events:
+      - http:
+          path: get_metrics
+          method: get
+          cors: true
 
 #  call_twitter_stream_api:
 #    handler: handler.call_twitter_stream_api
