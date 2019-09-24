@@ -96,9 +96,10 @@ def stream_tweets(event, context):
     body = event['body'] if isinstance(event['body'], dict) else json.loads(event['body'])
 
     tags = body.get("tags")
+    assert tags is not None, "Tag must be provided"
 
     streamer = TwitterStreamer()
-    streamer.stream_tweets(tags=tags if tags else ['serverless'])
+    streamer.stream_tweets(tags=tags)
 
     response = {
         "statusCode": 200,
@@ -115,7 +116,7 @@ def get_cloud_watch_metrics(event, context):
     metrics = list_cloud_watch_metrics(CLOUD_WATCH_DIMENSION_NAME)
     response = {
         "statusCode": 200,
-        "body": metrics,
+        "body": json.dumps(metrics),
         "headers": {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Credentials': True,
